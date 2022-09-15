@@ -10,14 +10,13 @@ pub(super) struct Rander();
 
 impl WithRander for Rander {
     fn rand(self, canvas: &HtmlCanvasElement) {
-        let wasm_state = use_state(|| -> Option<State> { None });
-
         {
-            let wasm_state = wasm_state.clone();
             let canvas = canvas.clone();
+            let (height, width) = (canvas.height(), canvas.width());
 
             wasm_bindgen_futures::spawn_local(async move {
-                wasm_state.set(Some(State::new(&canvas).await))
+                let mut wasm_state = State::new(&canvas).await;
+                wasm_state.render(height, width).unwrap();
             })
         }
     }
