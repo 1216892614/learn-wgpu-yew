@@ -1,19 +1,18 @@
 use web_sys::HtmlCanvasElement;
 use wgpu::include_wgsl;
-use yew::Callback;
 
+#[derive(Debug)]
 pub(super) struct State {
-    surface: wgpu::Surface,
+    pub(crate) surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
-    width: u32,
-    height: u32,
+    pub(crate) config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
+    height: u32,
+    width: u32,
 }
 
 impl State {
-    // Creating some of the wgpu types requires async code
     pub(super) async fn new(canvas: &HtmlCanvasElement) -> Self {
         let (width, height) = (canvas.width(), canvas.height());
 
@@ -32,8 +31,6 @@ impl State {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     features: wgpu::Features::empty(),
-                    // WebGL doesn't support all of wgpu's features, so if
-                    // we're building for the web we'll have to disable some.
                     limits: if cfg!(target_arch = "wasm32") {
                         wgpu::Limits::downlevel_webgl2_defaults()
                     } else {
@@ -68,8 +65,8 @@ impl State {
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main", // 1.
-                buffers: &[],           // 2.
+                entry_point: "vs_main",
+                buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 // 3.
@@ -104,19 +101,25 @@ impl State {
         });
 
         Self {
+            render_pipeline,
             surface,
+            config,
             device,
             queue,
-            config,
-            width,
             height,
-            render_pipeline,
+            width,
         }
     }
 
-    pub(super) fn render(&mut self, height: u32, width: u32) -> Result<(), wgpu::SurfaceError> {
-        (self.height, self.width) = (height, width);
+    pub(super) fn resize(&mut self, width: u32, height: u32) {
+        (self.width, self.height) = (width, height);
 
+        (self.config.width, self.config.height) = (width, height);
+
+        self.surface.configure(&self.device, &self.config);
+    }
+
+    pub(super) fn render(&self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture
