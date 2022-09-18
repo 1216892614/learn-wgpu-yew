@@ -1,14 +1,14 @@
-pub(super) mod vertex;
+pub(super) mod camera;
 pub(super) mod texture;
+pub(super) mod vertex;
 
-use gloo::net::http::Request;
+use gloo::console::log;
 use once_cell::sync::OnceCell;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlCanvasElement;
 use yew_canvas::WithRander;
 
 use crate::wgpu_state::State;
-
 
 #[derive(Clone, PartialEq)]
 pub(super) struct Rander();
@@ -25,13 +25,17 @@ impl WithRander for Rander {
                 spawn_local(async move {
                     let state = State::new(&canvas).await;
                     WGPU_STATE.get_or_init(|| state.unwrap());
-                    WGPU_STATE.get().unwrap().render().unwrap();
-                })
+
+                    //render pass per 17 ms
+                    gloo::timers::callback::Interval::new(17, || {
+                        WGPU_STATE.get().unwrap().render().unwrap();
+                    })
+                    .forget();
+                });
             }
 
             if !WGPU_STATE.get().is_none() {
-                WGPU_STATE.get_mut().unwrap().resize(width, height);
-
+                WGPU_STATE.get_mut().unwrap().update(width, height);
                 WGPU_STATE.get().unwrap().render().unwrap();
             }
         }

@@ -8,7 +8,12 @@ mod wgpu_state;
 #[function_component(App)]
 fn app() -> Html {
     html!(
-        <>
+        <div
+            style="
+                width: 100%;
+                height: 100%;
+            "
+        >
             <Canvas<WebGl2RenderingContext , rander::Rander>
                 //Just use style, canvas can suit automatically.
                 style="
@@ -17,7 +22,7 @@ fn app() -> Html {
                 "
                 rander={Box::new(rander::Rander())}
             />
-        </>
+        </div>
     )
 }
 
