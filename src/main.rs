@@ -1,4 +1,6 @@
-use web_sys::WebGl2RenderingContext;
+use gloo::console::log;
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlDivElement, WebGl2RenderingContext};
 use yew::prelude::*;
 use yew_canvas::Canvas;
 
@@ -7,8 +9,43 @@ mod wgpu_state;
 
 #[function_component(App)]
 fn app() -> Html {
+    let is_hold_state = use_state(|| false);
+    let cursor_move_state = use_state(|| (0i32,0i32));
+
+    let onmousedown = {
+        let is_hold_state = is_hold_state.clone();
+        let cursor_move_state = cursor_move_state.clone();
+        Callback::from(move |e: MouseEvent| {
+            let cursor = (e.screen_x(), e.screen_y());
+            cursor_move_state.set(cursor);
+            
+            is_hold_state.set(true);
+        })
+    };
+    
+    let onmouseup = {
+        let is_hold_state = is_hold_state.clone();
+        Callback::from(move |_| {
+            is_hold_state.set(false);
+        })
+    };
+    
+    let onmousemove = Callback::from(move |e: MouseEvent| {
+        if *is_hold_state {
+            let cursor = (e.screen_x(), e.screen_y());
+            let cursor_befor = *cursor_move_state;
+
+
+                    todo!();
+            cursor_move_state.set(cursor);
+        }
+    });
+
     html!(
         <div
+            {onmousedown}
+            {onmouseup}
+            {onmousemove}
             style="
                 width: 100%;
                 height: 100%;
