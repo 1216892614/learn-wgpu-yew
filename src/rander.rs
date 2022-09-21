@@ -11,7 +11,9 @@ use yew_canvas::WithRander;
 use crate::wgpu_state::State;
 
 #[derive(Clone, PartialEq)]
-pub(super) struct Rander();
+pub(super) struct Rander {
+    pub(crate) cursor_to: (i32, i32),
+}
 
 static mut WGPU_STATE: OnceCell<State> = OnceCell::new();
 
@@ -35,7 +37,10 @@ impl WithRander for Rander {
             }
 
             if !WGPU_STATE.get().is_none() {
-                WGPU_STATE.get_mut().unwrap().update(width, height);
+                WGPU_STATE
+                    .get_mut()
+                    .unwrap()
+                    .update(width, height, self.cursor_to);
                 WGPU_STATE.get().unwrap().render().unwrap();
             }
         }

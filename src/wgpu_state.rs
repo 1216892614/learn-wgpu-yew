@@ -133,7 +133,7 @@ impl State {
         let camera = camera::Camera {
             // position the camera one unit up and 2 units back
             // +z is out of the screen
-            eye: (0.0, 1.0, 2.0).into(),
+            eye: (0.0, 0.0, 2.0).into(),
             // have it look at the origin
             target: (0.0, 0.0, 0.0).into(),
             // which way is "up"
@@ -143,7 +143,6 @@ impl State {
             znear: 0.1,
             zfar: 100.0,
         };
-
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera);
@@ -250,7 +249,7 @@ impl State {
         })
     }
 
-    pub(super) fn update(&mut self, width: u32, height: u32) {
+    pub(super) fn update(&mut self, width: u32, height: u32, cursor_to: (i32, i32)) {
         (self.width, self.height) = (width, height);
 
         (self.config.width, self.config.height) = (width, height);
@@ -259,9 +258,10 @@ impl State {
 
         let camera = camera::Camera {
             aspect: width as f32 / height as f32,
+            eye: self.camera.eye
+                + cgmath::Vector3::new(cursor_to.0 as f32 / 10.0, - cursor_to.1 as f32 / 10.0, 0.0),
             ..self.camera
         };
-
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera);
@@ -276,7 +276,6 @@ impl State {
     }
 
     pub(super) fn render(&self) -> Result<(), wgpu::SurfaceError> {
-        
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture

@@ -1,6 +1,5 @@
 use gloo::console::log;
-use wasm_bindgen::JsCast;
-use web_sys::{HtmlDivElement, WebGl2RenderingContext};
+use web_sys::WebGl2RenderingContext;
 use yew::prelude::*;
 use yew_canvas::Canvas;
 
@@ -10,7 +9,8 @@ mod wgpu_state;
 #[function_component(App)]
 fn app() -> Html {
     let is_hold_state = use_state(|| false);
-    let cursor_move_state = use_state(|| (0i32,0i32));
+    let cursor_move_state = use_state(|| (0i32, 0i32));
+    let cursor_to_state = use_state(|| (0i32, 0i32));
 
     let onmousedown = {
         let is_hold_state = is_hold_state.clone();
@@ -18,28 +18,33 @@ fn app() -> Html {
         Callback::from(move |e: MouseEvent| {
             let cursor = (e.screen_x(), e.screen_y());
             cursor_move_state.set(cursor);
-            
+
             is_hold_state.set(true);
         })
     };
-    
+
     let onmouseup = {
         let is_hold_state = is_hold_state.clone();
         Callback::from(move |_| {
             is_hold_state.set(false);
         })
     };
-    
-    let onmousemove = Callback::from(move |e: MouseEvent| {
-        if *is_hold_state {
-            let cursor = (e.screen_x(), e.screen_y());
-            let cursor_befor = *cursor_move_state;
 
+    let onmousemove = {
+        let cursor_befor = *cursor_move_state.clone();
+        let cursor_to_state = cursor_to_state.clone();
 
-                    todo!();
-            cursor_move_state.set(cursor);
-        }
-    });
+        Callback::from(move |e: MouseEvent| {
+            if *is_hold_state {
+                let cursor = (e.screen_x(), e.screen_y());
+                cursor_to_state.set((cursor_befor.0 - cursor.0, cursor_befor.1 - cursor.1));
+            }
+        })
+    };
+
+    let rander = rander::Rander {
+        cursor_to: *cursor_to_state,
+    };
 
     html!(
         <div
@@ -57,7 +62,7 @@ fn app() -> Html {
                     width: 100%;
                     height: 100%;
                 "
-                rander={Box::new(rander::Rander())}
+                rander={Box::new(rander)}
             />
         </div>
     )
