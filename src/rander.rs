@@ -1,6 +1,7 @@
 pub(super) mod camera;
 pub(super) mod texture;
 pub(super) mod vertex;
+pub(super) mod instance;
 
 use gloo::console::log;
 use once_cell::sync::OnceCell;

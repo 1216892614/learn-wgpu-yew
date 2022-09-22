@@ -1,8 +1,9 @@
+use cgmath::prelude::*;
 use web_sys::HtmlCanvasElement;
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::rander::{
-    camera, texture,
+    camera, instance, texture,
     vertex::{Vertex, INDICES, VERTICES},
 };
 
@@ -26,6 +27,9 @@ pub(super) struct State {
 
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
+
+    instances: Vec<instance::Instance>,
+    instance_buffer: wgpu::Buffer,
 }
 
 impl State {
@@ -184,6 +188,41 @@ impl State {
                 push_constant_ranges: &[],
             });
 
+        let instances = (0..instance::NUM_INSTANCES_PER_ROW)
+            .flat_map(|z| {
+                (0..instance::NUM_INSTANCES_PER_ROW).map(move |x| {
+                    let position = cgmath::Vector3 {
+                        x: x as f32,
+                        y: 0.0,
+                        z: z as f32,
+                    } - instance::INSTANCE_DISPLACEMENT;
+
+                    let rotation = if position.is_zero() {
+                        // this is needed so an object at (0, 0, 0) won't get scaled to zero
+                        // as Quaternions can effect scale if they're not created correctly
+                        cgmath::Quaternion::from_axis_angle(
+                            cgmath::Vector3::unit_z(),
+                            cgmath::Deg(0.0),
+                        )
+                    } else {
+                        cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+                    };
+
+                    instance::Instance { position, rotation }
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let instance_data = instances
+            .iter()
+            .map(instance::Instance::to_raw)
+            .collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         let shader = device.create_shader_module(include_wgsl!("shader/shader.wgsl"));
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -192,7 +231,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), instance::InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -246,6 +285,9 @@ impl State {
             camera_uniform,
             camera_buffer,
             camera_bind_group,
+
+            instances,
+            instance_buffer,
         })
     }
 
@@ -259,7 +301,7 @@ impl State {
         let camera = camera::Camera {
             aspect: width as f32 / height as f32,
             eye: self.camera.eye
-                + cgmath::Vector3::new(cursor_to.0 as f32 / 10.0, - cursor_to.1 as f32 / 10.0, 0.0),
+                + cgmath::Vector3::new(cursor_to.0 as f32 / 10.0, -cursor_to.1 as f32 / 10.0, 0.0),
             ..self.camera
         };
 
@@ -313,9 +355,11 @@ impl State {
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
 
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
         }
 
         // submit will accept anything that implements IntoIter
