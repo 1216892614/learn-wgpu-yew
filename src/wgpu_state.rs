@@ -11,11 +11,13 @@ use crate::rander::{
 pub(super) struct State {
     pub(crate) surface: wgpu::Surface,
     pub(crate) config: wgpu::SurfaceConfiguration,
+
     device: wgpu::Device,
     queue: wgpu::Queue,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
+
     num_indices: u32,
     height: u32,
     width: u32,
@@ -87,6 +89,7 @@ impl State {
         };
         surface.configure(&device, &config);
 
+        //==Texture==
         let texture_img = texture_img.await?;
 
         surface.configure(&device, &config);
@@ -134,6 +137,7 @@ impl State {
             label: Some("diffuse_bind_group"),
         });
 
+        //==Camera==
         let camera = camera::Camera {
             // position the camera one unit up and 2 units back
             // +z is out of the screen
@@ -181,13 +185,7 @@ impl State {
             label: Some("camera_bind_group"),
         });
 
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
-                push_constant_ranges: &[],
-            });
-
+        //==Instances==
         let instances = (0..instance::NUM_INSTANCES_PER_ROW)
             .flat_map(|z| {
                 (0..instance::NUM_INSTANCES_PER_ROW).map(move |x| {
@@ -223,7 +221,15 @@ impl State {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        //==Shader==
         let shader = device.create_shader_module(include_wgsl!("shader/shader.wgsl"));
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
+                push_constant_ranges: &[],
+            });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
