@@ -1,4 +1,3 @@
-use gloo::console::log;
 use web_sys::WebGl2RenderingContext;
 use yew::prelude::*;
 use yew_canvas::Canvas;
@@ -31,13 +30,13 @@ fn app() -> Html {
     };
 
     let onmousemove = {
-        let cursor_befor = *cursor_move_state.clone();
+        let cursor_before = *cursor_move_state.clone();
         let cursor_to_state = cursor_to_state.clone();
 
         Callback::from(move |e: MouseEvent| {
             if *is_hold_state {
                 let cursor = (e.screen_x(), e.screen_y());
-                cursor_to_state.set((cursor_befor.0 - cursor.0, cursor_befor.1 - cursor.1));
+                cursor_to_state.set((cursor_before.0 - cursor.0, cursor_before.1 - cursor.1));
             }
         })
     };
