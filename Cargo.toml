@@ -19,6 +19,7 @@ yew = "0.19.3"
 yew-canvas = "0.2.1"
 anyhow = "1.0.65"
 cgmath = "0.18.0"
+tobj = { version = "3.2.3", features = ["async"] }
 
 [dependencies.image]
 default-features = false

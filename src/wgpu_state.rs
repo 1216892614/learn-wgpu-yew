@@ -3,7 +3,9 @@ use web_sys::HtmlCanvasElement;
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::rander::{
-    camera, instance, texture,
+    camera, instance,
+    model::{self, DrawModel},
+    texture,
     vertex::{Vertex, INDICES, VERTICES},
 };
 
@@ -22,6 +24,8 @@ pub(super) struct State {
     height: u32,
     width: u32,
 
+    obj_model: model::Model,
+
     camera: camera::Camera,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
@@ -38,7 +42,8 @@ pub(super) struct State {
 
 impl State {
     pub(super) async fn new(canvas: &HtmlCanvasElement) -> Result<Self, anyhow::Error> {
-        let texture_img = texture::TextureImage::from_url("/static/happy-tree.bdff8a19.png");
+        let texture_img = texture::TextureImage::from_file_name("cube-diffuse.jpg");
+        let obj_model = "cube.obj";
 
         let (width, height) = (canvas.width(), canvas.height());
 
@@ -124,6 +129,11 @@ impl State {
                 label: Some("texture_bind_group_layout"),
             });
 
+        let obj_model =
+            model::Model::from_file_name(obj_model, &device, &queue, &texture_bind_group_layout)
+                .await
+                .unwrap();
+
         let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &texture_bind_group_layout,
             entries: &[
@@ -195,15 +205,14 @@ impl State {
         let instances = (0..instance::NUM_INSTANCES_PER_ROW)
             .flat_map(|z| {
                 (0..instance::NUM_INSTANCES_PER_ROW).map(move |x| {
-                    let position = cgmath::Vector3 {
-                        x: x as f32,
-                        y: 0.0,
-                        z: z as f32,
-                    } - instance::INSTANCE_DISPLACEMENT;
+                    let x = instance::SPACE_BETWEEN
+                        * (x as f32 - instance::NUM_INSTANCES_PER_ROW as f32 / 2.0);
+                    let z = instance::SPACE_BETWEEN
+                        * (z as f32 - instance::NUM_INSTANCES_PER_ROW as f32 / 2.0);
+
+                    let position = cgmath::Vector3 { x, y: 0.0, z };
 
                     let rotation = if position.is_zero() {
-                        // this is needed so an object at (0, 0, 0) won't get scaled to zero
-                        // as Quaternions can effect scale if they're not created correctly
                         cgmath::Quaternion::from_axis_angle(
                             cgmath::Vector3::unit_z(),
                             cgmath::Deg(0.0),
@@ -243,7 +252,10 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[Vertex::desc(), instance::InstanceRaw::desc()],
+                buffers: &[
+                    <model::ModelVertex as model::Vertex>::desc(),
+                    instance::InstanceRaw::desc(),
+                ],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -295,6 +307,8 @@ impl State {
 
             height,
             width,
+
+            obj_model,
 
             diffuse_bind_group,
             diffuse_texture,
@@ -378,17 +392,13 @@ impl State {
             });
 
             // render()
-            render_pass.set_pipeline(&self.render_pipeline);
-
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw_model_instanced(
+                &self.obj_model,
+                0..self.instances.len() as u32,
+                &self.camera_bind_group,
+            );
         }
 
         // submit will accept anything that implements IntoIter

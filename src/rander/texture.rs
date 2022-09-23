@@ -123,18 +123,15 @@ pub(crate) struct TextureImage {
 }
 
 impl TextureImage {
-    pub(crate) async fn from_url(url: &str) -> Result<Self, anyhow::Error> {
-        let resp = Request::get(url)
-            .header("responseType", "blob")
-            .send()
-            .await?
-            .binary()
-            .await?;
-
-        Ok(Self::from_bytes(&resp))
+    pub(crate) async fn from_file_name(name: &str) -> Result<Self, anyhow::Error> {
+        Ok(Self::from_bytes(
+            &crate::resources::Resources::from_path(&format!("static/{}", name))
+                .request_binary()
+                .await?,
+        ))
     }
 
-    fn from_bytes(diffuse_bytes: &[u8]) -> Self {
+    pub(crate) fn from_bytes(diffuse_bytes: &[u8]) -> Self {
         let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
         let diffuse_rgba = diffuse_image.to_rgba8();
 

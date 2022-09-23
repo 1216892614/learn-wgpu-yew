@@ -4,6 +4,7 @@ use yew_canvas::Canvas;
 
 mod rander;
 mod wgpu_state;
+mod resources;
 
 #[function_component(App)]
 fn app() -> Html {
