@@ -2,7 +2,9 @@ pub(super) mod camera;
 pub(super) mod instance;
 pub(super) mod model;
 pub(super) mod texture;
+pub(super) mod light;
 pub(super) mod vertex;
+pub(super) mod shader;
 
 use once_cell::sync::OnceCell;
 use wasm_bindgen_futures::spawn_local;
@@ -31,7 +33,7 @@ impl WithRander for Rander {
 
                     //render pass per 17 ms
                     gloo::timers::callback::Interval::new(17, || {
-                        WGPU_STATE.get().unwrap().render().unwrap();
+                        WGPU_STATE.get_mut().unwrap().render().unwrap();
                     })
                     .forget();
                 });
@@ -42,7 +44,7 @@ impl WithRander for Rander {
                     .get_mut()
                     .unwrap()
                     .update(width, height, self.cursor_to);
-                WGPU_STATE.get().unwrap().render().unwrap();
+                WGPU_STATE.get_mut().unwrap().render().unwrap();
             }
         }
     }
