@@ -13,6 +13,7 @@ impl Texture {
         queue: &wgpu::Queue,
         texture_img: TextureImage,
         label: Option<&str>,
+        is_normal_map: bool,
     ) -> Result<Self, anyhow::Error> {
         let dimensions = texture_img.dimensions();
         let rgba = texture_img.into_diffuse_rgba();
@@ -28,7 +29,11 @@ impl Texture {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            format: if is_normal_map {
+                wgpu::TextureFormat::Rgba8Unorm
+            } else {
+                wgpu::TextureFormat::Rgba8UnormSrgb
+            },
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
 
