@@ -6,7 +6,6 @@ use crate::rander::{
     camera, instance,
     model::{self, DrawModel},
     texture,
-    vertex::{Vertex, INDICES, VERTICES},
 };
 
 #[derive(Debug)]
@@ -17,10 +16,6 @@ pub(super) struct State {
     device: wgpu::Device,
     queue: wgpu::Queue,
     render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-
-    num_indices: u32,
     height: u32,
     width: u32,
 
@@ -31,9 +26,6 @@ pub(super) struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
 
-    diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture,
-
     depth_texture: texture::Texture,
 
     instances: Vec<instance::Instance>,
@@ -42,7 +34,6 @@ pub(super) struct State {
 
 impl State {
     pub(super) async fn new(canvas: &HtmlCanvasElement) -> Result<Self, anyhow::Error> {
-        let texture_img = texture::TextureImage::from_file_name("cube-diffuse.jpg");
         let obj_model = "cube.obj";
 
         let (width, height) = (canvas.width(), canvas.height());
@@ -73,20 +64,6 @@ impl State {
             )
             .await?;
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let num_indices = INDICES.len() as u32;
-
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_supported_formats(&adapter)[0],
@@ -95,14 +72,6 @@ impl State {
             present_mode: wgpu::PresentMode::Fifo,
         };
         surface.configure(&device, &config);
-
-        //==Texture==
-        let texture_img = texture_img.await?;
-
-        surface.configure(&device, &config);
-
-        let diffuse_texture =
-            texture::Texture::from_image(&device, &queue, texture_img, Some("happy-tree.png"))?;
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -133,21 +102,6 @@ impl State {
             model::Model::from_file_name(obj_model, &device, &queue, &texture_bind_group_layout)
                 .await
                 .unwrap();
-
-        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &texture_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },
-            ],
-            label: Some("diffuse_bind_group"),
-        });
 
         //==DeepBuffer==
         let depth_texture =
@@ -301,17 +255,10 @@ impl State {
 
             render_pipeline,
 
-            vertex_buffer,
-            index_buffer,
-            num_indices,
-
             height,
             width,
 
             obj_model,
-
-            diffuse_bind_group,
-            diffuse_texture,
 
             depth_texture,
 

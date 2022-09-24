@@ -1,4 +1,3 @@
-use gloo::net::http::Request;
 use image::RgbaImage;
 
 #[derive(Debug)]

@@ -1,10 +1,9 @@
-pub(super) mod model;
 pub(super) mod camera;
+pub(super) mod instance;
+pub(super) mod model;
 pub(super) mod texture;
 pub(super) mod vertex;
-pub(super) mod instance;
 
-use gloo::console::log;
 use once_cell::sync::OnceCell;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlCanvasElement;
